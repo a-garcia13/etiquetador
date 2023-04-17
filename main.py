@@ -12,7 +12,7 @@ BATCH_SIZE = 10
 query = {
     "Desc_Noticia_Limpia": {"$exists": True},
     "es_economica_manual": {"$exists": False},
-    "Max_similarity": {"$exists": True}
+    "Max_similarity": {"$exists": True, "$gt": 0.5}
 }
 # Connect to the MongoDB database and get the collection
 client = MongoClient(
