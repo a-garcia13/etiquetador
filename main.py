@@ -64,11 +64,13 @@ def process_updates():
 
 
 class NewArticle:
-    def __init__(self, article, id):
+    def __init__(self, article, id, url, fecha):
+        st.markdown("Fecha de la noticia: "+fecha+"\n")
+        st.markdown("Fuente: "+url+"\n")
         st.write(article)
         # Display Yes and No buttons
         self.id = id
-        self.yes_button = st.form_submit_button("Yes")
+        self.yes_button = st.form_submit_button("Sí")
         self.no_button = st.form_submit_button("No")
 
 
@@ -98,7 +100,7 @@ def main():
 
         num = st.session_state.num
 
-        if placeholder2.button('end', key=num):
+        if placeholder2.button('Finalizar sesión', key=num):
             placeholder2.empty()
             df = pd.DataFrame(st.session_state.data)
             st.dataframe(df)
@@ -114,7 +116,7 @@ def main():
                     article = news_batch.iloc[news_batch_index]
                     news_batch_index += 1
 
-                news = NewArticle(article['Desc_Noticia'], article['_id'])
+                news = NewArticle(article['Desc_Noticia'], article['_id'], article['Cod_Url'], str(article['Fecha_Noticia']))
                 if news.yes_button or news.no_button:
                     update_queue.put((article["_id"], "Sí" if news.yes_button else "No"))
                     st.session_state.data.append({
@@ -128,4 +130,5 @@ def main():
 
 st.title("Etiquetador de noticias")
 st.write("Seleccione 'Sí', si la noticia es económica, de lo contrario seleccione 'No'.")
+st.write(" Seleccione 'finalizar' para terminar la sesión")
 main()
