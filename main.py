@@ -114,7 +114,7 @@ def main():
                     article = news_batch.iloc[news_batch_index]
                     news_batch_index += 1
 
-                news = NewArticle(article['Desc_Noticia_Limpia'], article['_id'])
+                news = NewArticle(article['Desc_Noticia'], article['_id'])
                 if news.yes_button or news.no_button:
                     update_queue.put((article["_id"], "Sí" if news.yes_button else "No"))
                     st.session_state.data.append({
