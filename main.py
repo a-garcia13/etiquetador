@@ -9,7 +9,15 @@ import random
 client = MongoClient(
     "mongodb://inst-newstic:7E69wh96tzcKjK5u3tnFHK7BwbpT2dbU61JsXxVsYdPNTuazAGNBZQPxNo6xaQcDJbxlsIKmiDrhACDbDy1fmg%3D%3D@inst-newstic.mongo.cosmos.azure.com:10255/?ssl=true&replicaSet=globaldb&retrywrites=false&maxIdleTimeMS=120000&appName=@inst-newstic@")
 db = client["newstic"]
-collection = db["Stg_TIE_Noticia_Twitter"]
+collection = db["TIE_Modelo_Economia"]
+query = {
+    "Desc_Noticia_Limpia": {"$exists": True},
+    "es_economica_manual": {"$exists": False},
+    "Max_similarity": {"$exists": True}
+}
+cursor = collection.find(query)
+df = pd.DataFrame(list(cursor))
+
 
 if 'num' not in st.session_state:
     st.session_state.num = 1
@@ -19,19 +27,20 @@ if 'data' not in st.session_state:
 
 # Get a random news article from the MongoDB collection
 def get_random_news():
-    # Define the query
-    query = {"es_economica_manual": {"$exists": True}}
-    # Load data into a pandas DataFrame
-    cursor = collection.find(query)
-    df = pd.DataFrame(list(cursor))
-    news_count = collection.count_documents({})
-    random_news_index = random.randint(0, news_count - 1)
-    return collection.find().skip(random_news_index).next()
+    random_index = random.randint(0, len(df) - 1)
+    random_news = df.iloc[random_index]
+    return random_news
 
 
 # Update the es_economica_manual field in MongoDB
 def update_news_status(news_id, answer):
-    collection.update_one({"_id": ObjectId(news_id)}, {"$set": {"es_economica_manual": answer}})
+    to_update = collection.find_one({"_id": ObjectId(news_id)})
+    if "es_economica_manual" not in to_update:
+        collection.update_one({"_id": ObjectId(news_id)}, {"$set": {"es_economica_manual": answer}})
+    else:
+        with st.spinner("Actualizando collección..."):
+            cursor = collection.find(query)
+            df = pd.DataFrame(list(cursor))
 
 
 class NewArticle:
@@ -57,12 +66,14 @@ def main():
         else:
             with placeholder.form(key=str(num)):
                 # Get a random news article and display it
-                article = get_random_news()
-                news = NewArticle(article['Desc_Noticia_Limpia'], article['_id'])
+                with st.spinner("Cargando articulo nuevo..."):
+                    article = get_random_news()
+                news = NewArticle(article['Desc_Noticia'], article['_id'])
                 if news.yes_button or news.no_button:
-                    update_news_status(article["_id"], "Yes" if news.yes_button else "No")
+                    with st.spinner("Actualizando base de datos..."):
+                        update_news_status(article["_id"], "Sí" if news.yes_button else "No")
                     st.session_state.data.append({
-                        '_id': article['_id'], 'es_economica_manual': "Yes" if news.yes_button else "No"})
+                        '_id': article['_id'], 'es_economica_manual': "Sí" if news.yes_button else "No"})
                     st.session_state.num += 1
                     placeholder.empty()
                     placeholder2.empty()
@@ -71,4 +82,5 @@ def main():
 
 
 st.title("Etiquetador de noticias")
+st.write("Seleccione 'Sí', si la noticia es económica, de lo contrario seleccione 'No'.")
 main()
