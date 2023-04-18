@@ -29,11 +29,64 @@ if 'data' not in st.session_state:
 update_queue = queue.Queue()
 
 
+def filter_urls(data_frame):
+    valid_substrings = [
+        "https://www.adr.gov.co/",
+        "https://www.alertabogota.com/",
+        "https://www.alertatolima.com/",
+        "https://thearchipielagopress.co/",
+        "https://www.cali24horas.com/",
+        "https://www.ccb.org.co/",
+        "https://caracol.com.co/",
+        "https://www.diariodelnorte.net/",
+        "https://www.diariodelsur.com.co/",
+        "https://diarioriente.com/",
+        "https://elextra.co/",
+        "https://www.elpaisvallenato.com/",
+        "https://www.ecosdelcombeima.com/",
+        "https://www.innovaspain.com/",
+        "https://www.lafm.com.co/",
+        "https://laguajirahoy.com/",
+        "https://larazon.co/",
+        "https://www.lavozdeyopal.co/",
+        "https://www.las2orillas.co/",
+        "https://www.llanoaldia.co/",
+        "https://llanoalmundo.com/",
+        "https://llanosietedias.com/",
+        "https://www.noticiasdelmeta.com.co/",
+        "https://noticierodelllano.com/",
+        "https://periodicodelmeta.com/",
+        "https://periodicovirtual.com/",
+        "https://radio1040am.com/",
+        "https://www.radionacional.co/",
+        "https://radiosuper.com.co/",
+        "https://www.radionica.rocks/",
+        "https://revistaelcongreso.com/",
+        "https://risaraldahoy.com/",
+        "https://semanariolacalle.com/",
+        "https://www.sinergiainformativa.com.co/",
+        "https://tiemporeal.media/",
+        "https://www.valoraanalitik.com/",
+        "https://www.villavicenciodiaadia.com/",
+        "https://villavoalreves.co/",
+        "https://www.violetastereo.com/wp/",
+        "https://www.viveelmeta.com/",
+    ]
+
+    def contains_valid_substring(url):
+        return any(substring in url for substring in valid_substrings)
+
+    filtered_data_frame = data_frame[data_frame["Cod_Url"].apply(contains_valid_substring)]
+    return filtered_data_frame
+
+
 @st.cache(suppress_st_warning=True, allow_output_mutation=True)
 def get_data():
     cursor = collection.find(query)
     df = pd.DataFrame(list(cursor))
-    return df
+    # Filter the DataFrame using the filter_urls function
+    filtered_df = filter_urls(df)
+    return filtered_df
 
 
 # Get a batch of random news articles from the MongoDB collection
@@ -53,7 +106,9 @@ def update_news_status(news_id, answer):
 def refresh_dataframe():
     cursor = collection.find(query)
     df = pd.DataFrame(list(cursor))
-    return df
+    # Filter the DataFrame using the filter_urls function
+    filtered_df = filter_urls(df)
+    return filtered_df
 
 
 def process_updates():
