@@ -9,7 +9,7 @@ db = client["newstic"]
 collection = db["TIE_Modelo_Economia"]
 
 # Replace the following with the document ID you want to query
-DOCUMENT_ID = "643d00ff8561915558a04af7"
+DOCUMENT_ID = "643cdf29589a5768ae55e051"
 
 # Query the collection by the document ID and print the result
 document = collection.find_one({"_id": ObjectId(DOCUMENT_ID)})

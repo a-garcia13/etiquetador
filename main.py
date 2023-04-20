@@ -83,6 +83,7 @@ def filter_urls(data_frame):
     return filtered_data_frame
 
 
+@st.cache_data(ttl=3600)
 def get_data():
     cursor = collection.find(query)
     df = pd.DataFrame(list(cursor))
@@ -112,15 +113,6 @@ def update_news_status(news_id, answer):
         collection.update_one({"_id": ObjectId(news_id)}, {"$set": {"es_economica_manual": answer}})
 
 
-def refresh_dataframe():
-    cursor = collection.find(query)
-    df = pd.DataFrame(list(cursor))
-    # Filter the DataFrame using the filter_urls function
-    filtered_df = filter_urls(df)
-    served_articles.clear()
-    return filtered_df
-
-
 def process_updates():
     while True:
         news_id, answer = update_queue.get()
@@ -130,8 +122,8 @@ def process_updates():
 
 class NewArticle:
     def __init__(self, article, id, url, fecha, sim):
-        st.write("Fecha de la noticia: "+fecha+"\n")
-        st.write("Fuente: "+url+"\n")
+        st.write("Fecha de la noticia: " + fecha + "\n")
+        st.write("Fuente: " + url + "\n")
         st.write("ID de la noticia: " + str(id) + "\n")
         st.write("Nivel de similaridad: " + str(sim) + "\n")
 
@@ -164,14 +156,6 @@ def main():
     news_batch_index = 0
 
     while True:
-        current_time = time.time()
-        if current_time - last_refresh_time >= 43200:  # 3600 seconds = 1 hour
-            with st.spinner("Refreshing the data..."):
-                df = refresh_dataframe()
-                last_refresh_time = current_time
-                news_batch = get_random_news_batch(BATCH_SIZE, df)
-                news_batch_index = 0
-
         num = st.session_state.num
 
         if placeholder2.button('Finalizar sesión', key=num):
