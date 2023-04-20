@@ -28,6 +28,9 @@ if 'data' not in st.session_state:
 # Create a queue for updates
 update_queue = queue.Queue()
 
+# Create a global set to store served article IDs
+served_articles = set()
+
 
 def filter_urls(data_frame):
     valid_substrings = [
@@ -80,7 +83,6 @@ def filter_urls(data_frame):
     return filtered_data_frame
 
 
-@st.cache(suppress_st_warning=True, allow_output_mutation=True)
 def get_data():
     cursor = collection.find(query)
     df = pd.DataFrame(list(cursor))
@@ -91,8 +93,15 @@ def get_data():
 
 # Get a batch of random news articles from the MongoDB collection
 def get_random_news_batch(batch_size, df):
-    random_indices = random.sample(range(len(df)), batch_size)
-    random_news_batch = df.iloc[random_indices]
+    available_indices = set(df.index) - served_articles
+    if len(available_indices) < batch_size:
+        # Reset served_articles if not enough articles are available
+        served_articles.clear()
+        available_indices = set(df.index)
+
+    random_indices = random.sample(available_indices, batch_size)
+    random_news_batch = df.loc[random_indices]
+    served_articles.update(random_indices)  # Add the served article IDs to the set
     return random_news_batch
 
 
@@ -108,6 +117,7 @@ def refresh_dataframe():
     df = pd.DataFrame(list(cursor))
     # Filter the DataFrame using the filter_urls function
     filtered_df = filter_urls(df)
+    served_articles.clear()
     return filtered_df
 
 
@@ -119,14 +129,23 @@ def process_updates():
 
 
 class NewArticle:
-    def __init__(self, article, id, url, fecha):
-        st.markdown("Fecha de la noticia: "+fecha+"\n")
-        st.markdown("Fuente: "+url+"\n")
-        st.write(article)
+    def __init__(self, article, id, url, fecha, sim):
+        st.write("Fecha de la noticia: "+fecha+"\n")
+        st.write("Fuente: "+url+"\n")
+        st.write("ID de la noticia: " + str(id) + "\n")
+        st.write("Nivel de similaridad: " + str(sim) + "\n")
+
+        # Remove specified symbols from the article string
+        symbols_to_remove = "$|{}[]"
+        translation_table = str.maketrans("", "", symbols_to_remove)
+        cleaned_article = str(article).translate(translation_table)
+
+        st.write(str(cleaned_article))
         # Display Yes and No buttons
         self.id = id
         self.yes_button = st.form_submit_button("Sí")
         self.no_button = st.form_submit_button("No")
+        self.skip_button = st.form_submit_button("Omitir")  # Add skip button attribute
 
 
 # Start a background thread to process updates
@@ -146,7 +165,7 @@ def main():
 
     while True:
         current_time = time.time()
-        if current_time - last_refresh_time >= 1800:  # 3600 seconds = 1 hour
+        if current_time - last_refresh_time >= 43200:  # 3600 seconds = 1 hour
             with st.spinner("Refreshing the data..."):
                 df = refresh_dataframe()
                 last_refresh_time = current_time
@@ -171,11 +190,16 @@ def main():
                     article = news_batch.iloc[news_batch_index]
                     news_batch_index += 1
 
-                news = NewArticle(article['Desc_Noticia'], article['_id'], article['Cod_Url'], str(article['Fecha_Noticia']))
+                news = NewArticle(article['Desc_Noticia'], article['_id'], article['Cod_Url'],
+                                  str(article['Fecha_Noticia']), article['Max_similarity'])
                 if news.yes_button or news.no_button:
                     update_queue.put((article["_id"], "Sí" if news.yes_button else "No"))
                     st.session_state.data.append({
                         '_id': article['_id'], 'es_economica_manual': "Sí" if news.yes_button else "No"})
+                    st.session_state.num += 1
+                    placeholder.empty()
+                    placeholder2.empty()
+                elif news.skip_button:  # Check if the skip button is clicked
                     st.session_state.num += 1
                     placeholder.empty()
                     placeholder2.empty()
