@@ -10,9 +10,10 @@ import time
 
 BATCH_SIZE = 10
 query = {
-    "Desc_Noticia_Limpia": {"$exists": True},
+    "Desc_Noticia": {"$exists": True},
     "es_economica_manual": {"$exists": False},
-    "Max_similarity": {"$exists": True, "$gt": 0.5}
+    "Max_similarity": {"$exists": True, "$gt": 0.5, "$lt": 0.9},
+    "character_count": {"$exists": True, "$gt": 500}
 }
 # Connect to the MongoDB database and get the collection
 client = MongoClient(
@@ -85,7 +86,7 @@ def filter_urls(data_frame):
 
 @st.cache_data(ttl=3600)
 def get_data():
-    cursor = collection.find(query)
+    cursor = collection.find(query).limit(7000)
     df = pd.DataFrame(list(cursor))
     # Filter the DataFrame using the filter_urls function
     filtered_df = filter_urls(df)
